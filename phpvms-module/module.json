@@ -1,0 +1,19 @@
+{
+    "name": "SkyNet ACARS",
+    "alias": "skynet-acars",
+    "description": "ACARS (Aircraft Communications Addressing and Reporting System) integration module for phpVMS7. Allows pilots to submit flight data and PIREPs directly from their simulator.",
+    "keywords": [
+        "acars",
+        "flight tracking",
+        "pirep",
+        "simulator"
+    ],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\SkyNetAcars\\Providers\\SkyNetAcarsServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
