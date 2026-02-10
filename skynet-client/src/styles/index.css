@@ -133,4 +133,21 @@
     background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
+  /* ─── ACARS scrolling text log ─── */
+  .acars-log-marquee {
+    display: inline-flex;
+    gap: 3rem;
+    white-space: nowrap;
+    animation: acars-marquee 40s linear infinite;
+  }
+}
+
+@keyframes acars-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }

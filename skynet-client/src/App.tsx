@@ -494,7 +494,7 @@ function App() {
         {acarsData ? (
           <div className="max-w-6xl mx-auto space-y-5">
 
-            {/* Route Banner - Leaf UI inspired hero section */}
+            {/* Route + Progress Banner */}
             <div className={`${cardClass} relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
                 <svg viewBox="0 0 100 100" fill="currentColor" className="text-jal-red w-full h-full">
@@ -529,6 +529,33 @@ function App() {
                   <div className="text-right">
                     <div className={labelClass}>{t('labels.aircraft')}</div>
                     <div className={`text-xl font-bold ${textColor}`}>{acarsData.aircraftIcao}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stylized horizontal route progress bar */}
+              <div className="mt-6">
+                <div className="relative h-7">
+                  <div className="absolute inset-y-1 left-10 right-10 rounded-full bg-gradient-to-r from-jal-red/70 via-jal-red to-jal-red/40 shadow-[0_0_25px_rgba(200,16,46,0.7)]" />
+                  <div className="absolute inset-y-[5px] left-12 right-16 flex items-center gap-1.5 px-1">
+                    {Array.from({ length: 18 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="flex-1 h-2 rounded-full bg-black/70 border border-jal-red/40"
+                      />
+                    ))}
+                  </div>
+                  {/* Aircraft marker */}
+                  <div className="absolute top-1/2 -translate-y-1/2 right-12 w-7 h-7 rounded-full bg-white shadow-[0_0_22px_rgba(255,255,255,0.9)]">
+                    <div className="absolute inset-1 rounded-full bg-gradient-to-br from-jal-navy to-jal-navy-light flex items-center justify-center">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4 text-jal-red"
+                        fill="currentColor"
+                      >
+                        <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -620,6 +647,75 @@ function App() {
                 </div>
               </div>
             )}
+
+            {/* Center-bottom vector map widget */}
+            <div className={cardClass}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={labelClass}>{t('labels.routeOverview') || 'Route Overview'}</div>
+                <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+                  <span>{t('labels.livePosition') || 'Live position'}</span>
+                </div>
+              </div>
+              <div className="relative w-full max-w-3xl mx-auto rounded-2xl border border-emerald-400/60 bg-black/60 overflow-hidden shadow-[0_0_35px_rgba(52,211,153,0.35)]">
+                <div className="absolute inset-0 bg-radial from-emerald-400/25 via-transparent to-transparent pointer-events-none" />
+                <svg
+                  viewBox="0 0 400 220"
+                  className="w-full h-56 md:h-64"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <radialGradient id="bgGrad" cx="50%" cy="40%" r="80%">
+                      <stop offset="0%" stopColor="#1f2937" />
+                      <stop offset="60%" stopColor="#020617" />
+                      <stop offset="100%" stopColor="#000000" />
+                    </radialGradient>
+                  </defs>
+                  <rect x="0" y="0" width="400" height="220" fill="url(#bgGrad)" />
+
+                  {/* Simple coastline silhouettes */}
+                  <path
+                    d="M40 150 C 70 110, 110 90, 150 80 C 190 70, 210 80, 220 95 C 240 115, 260 130, 290 140 C 320 150, 340 160, 360 175"
+                    fill="none"
+                    stroke="#1f2937"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                  />
+
+                  {/* Route line */}
+                  <path
+                    d="M70 150 C 130 90, 250 90, 330 140"
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="2.4"
+                    strokeDasharray="4 6"
+                  />
+
+                  {/* Departure / arrival waypoints */}
+                  <circle cx="70" cy="150" r="4" fill="#22c55e" />
+                  <circle cx="330" cy="140" r="4" fill="#22c55e" />
+                  <text x="56" y="166" className="text-[10px]" fill="#e2fbe7">
+                    {acarsData.departureIcao}
+                  </text>
+                  <text x="314" y="129" className="text-[10px]" fill="#e2fbe7">
+                    {acarsData.arrivalIcao}
+                  </text>
+
+                  {/* Live aircraft marker (approximate along route) */}
+                  <polygon
+                    points="200,118 220,110 220,116 244,116 244,120 220,120 220,126"
+                    fill="#ffffff"
+                    stroke="#0f172a"
+                    strokeWidth="0.5"
+                  />
+                </svg>
+                {acarsData && (
+                  <div className="absolute bottom-2 left-3 px-3 py-1.5 rounded-md bg-black/60 border border-white/10 text-[10px] font-mono text-white/60">
+                    {acarsData.latitude.toFixed(4)}°, {acarsData.longitude.toFixed(4)}°
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -636,36 +732,56 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
+      {/* Footer with ACARS message log */}
       <footer className={`${isDark ? 'bg-jal-navy-light/60 border-white/5' : 'bg-white/60 border-gray-200'} border-t backdrop-blur-sm px-6 py-2.5`}>
-        <div className={`flex items-center justify-between text-xs ${mutedText}`}>
-          <div className="flex items-center gap-4">
-            {lastUpdate ? (
-              <span>{t('labels.lastUpdate', { time: formatTimestamp(lastUpdate.toISOString()) })}</span>
-            ) : (
-              <span>{t('labels.noDataReceived')}</span>
-            )}
-            {useMockData && <span className="text-amber-500">● {t('labels.mockDataMode')}</span>}
-            {showAdvancedMetrics && (
-              <span className="text-jal-red">● {t('labels.advancedMetrics')}</span>
+        <div className="space-y-1">
+          <div className={`flex items-center justify-between text-xs ${mutedText}`}>
+            <div className="flex items-center gap-4">
+              {lastUpdate ? (
+                <span>{t('labels.lastUpdate', { time: formatTimestamp(lastUpdate.toISOString()) })}</span>
+              ) : (
+                <span>{t('labels.noDataReceived')}</span>
+              )}
+              {useMockData && <span className="text-amber-500">● {t('labels.mockDataMode')}</span>}
+              {showAdvancedMetrics && (
+                <span className="text-jal-red">● {t('labels.advancedMetrics')}</span>
+              )}
+            </div>
+            {currentFlight && (
+              <div className="flex items-center gap-3">
+                <span className={`font-medium ${textColor}`}>
+                  {t('flightInProgress.flightInProgress')}
+                </span>
+                <button
+                  onClick={handleClearFlight}
+                  className="px-3 py-1.5 rounded-lg bg-jal-red/10 hover:bg-jal-red/20 text-jal-red text-xs font-medium flex items-center gap-1.5 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  {t('flightInProgress.cancelFlight')}
+                </button>
+              </div>
             )}
           </div>
-          {currentFlight && (
-            <div className="flex items-center gap-3">
-              <span className={`font-medium ${textColor}`}>
-                {t('flightInProgress.flightInProgress')}
+
+          {/* Scrolling ACARS text log */}
+          <div className="relative overflow-hidden border-t border-white/5 pt-1.5">
+            <div className="acars-log-marquee text-[10px] font-mono text-amber-300/90">
+              <span>
+                2023-07-08 07:13:37Z &nbsp; ZEE04 &nbsp; ACARS &gt; PUSHBACK COMPLETE, TAXI TO RWY 04L.
               </span>
-              <button
-                onClick={handleClearFlight}
-                className="px-3 py-1.5 rounded-lg bg-jal-red/10 hover:bg-jal-red/20 text-jal-red text-xs font-medium flex items-center gap-1.5 transition-colors"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                {t('flightInProgress.cancelFlight')}
-              </button>
+              <span>
+                2023-07-08 07:13:45Z &nbsp; JFK TWR &nbsp; ACARS &gt; HOLD SHORT RWY 04L, EXPECT LINEUP.
+              </span>
+              <span>
+                2023-07-08 07:13:59Z &nbsp; ZEE04 &nbsp; ACARS &gt; DEPARTURE RTE MERIT 3, CLB VIA SID.
+              </span>
+              <span>
+                2023-07-08 07:14:22Z &nbsp; SKYTRACK &nbsp; ACARS &gt; POSITION REPORT AUTO-UPLINKED TO HUB.
+              </span>
             </div>
-          )}
+          </div>
         </div>
       </footer>
     </div>
