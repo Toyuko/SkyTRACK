@@ -1,78 +1,55 @@
-import { Pool, PoolClient } from 'pg';
+import { MongoClient, Db, Collection } from 'mongodb';
 import config from '../config/env';
 import { SkyNetAcarsData } from '../acars/skynet.schema';
-import { FlightPosition, FlightPositionRow, rowToFlightPosition, acarsDataToInsertParams } from './flight.model';
+import { FlightPosition, FlightPositionDoc, docToFlightPosition, acarsDataToDoc } from './flight.model';
 
 /**
  * Flight Service
  * Handles database operations for flight position updates and flight history
+ * Uses MongoDB as the backing store
  */
 export class FlightService {
-  private pool: Pool;
+  private client: MongoClient;
+  private db!: Db;
+  private positions!: Collection<FlightPositionDoc>;
+  private connected: boolean = false;
 
   constructor() {
-    this.pool = new Pool({
-      connectionString: config.SKYNET_DB_URL,
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+    this.client = new MongoClient(config.SKYNET_DB_URL, {
+      maxPoolSize: 20,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 2000,
     });
 
-    // Handle pool errors
-    this.pool.on('error', (err) => {
-      console.error('[SkyNet] Unexpected database pool error:', err);
+    this.client.on('error', (err: Error) => {
+      console.error('[SkyNet] Unexpected MongoDB client error:', err);
     });
   }
 
   /**
-   * Initialize database schema (create tables if they don't exist)
+   * Connect to MongoDB and ensure indexes exist
    * TODO: Consider using a proper migration system in production
    */
   async initializeSchema(): Promise<void> {
-    const client = await this.pool.connect();
     try {
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS flight_positions (
-          id SERIAL PRIMARY KEY,
-          callsign VARCHAR(10) NOT NULL,
-          simulator VARCHAR(10) NOT NULL,
-          aircraft_icao VARCHAR(4) NOT NULL,
-          departure_icao VARCHAR(4) NOT NULL,
-          arrival_icao VARCHAR(4) NOT NULL,
-          latitude DOUBLE PRECISION NOT NULL,
-          longitude DOUBLE PRECISION NOT NULL,
-          altitude DOUBLE PRECISION NOT NULL,
-          ground_speed DOUBLE PRECISION NOT NULL,
-          heading DOUBLE PRECISION NOT NULL,
-          fuel_kg DOUBLE PRECISION NOT NULL,
-          flight_phase VARCHAR(20) NOT NULL,
-          timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
+      await this.client.connect();
+      this.connected = true;
+      this.db = this.client.db();
+      this.positions = this.db.collection<FlightPositionDoc>('flight_positions');
 
-        CREATE INDEX IF NOT EXISTS idx_flight_positions_callsign ON flight_positions(callsign);
-        CREATE INDEX IF NOT EXISTS idx_flight_positions_timestamp ON flight_positions(timestamp);
-        CREATE INDEX IF NOT EXISTS idx_flight_positions_callsign_timestamp ON flight_positions(callsign, timestamp);
-      `);
+      // Create indexes for efficient querying
+      await this.positions.createIndex({ callsign: 1 });
+      await this.positions.createIndex({ timestamp: 1 });
+      await this.positions.createIndex({ callsign: 1, timestamp: -1 });
 
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS vas (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(100) NOT NULL UNIQUE,
-          base_url VARCHAR(255) NOT NULL,
-          api_token VARCHAR(255) NOT NULL,
-          enabled BOOLEAN DEFAULT true,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `);
+      // VAs collection
+      const vas = this.db.collection('vas');
+      await vas.createIndex({ name: 1 }, { unique: true });
 
-      console.log('[SkyNet] Database schema initialized');
+      console.log('[SkyNet] MongoDB schema initialized');
     } catch (error) {
-      console.error('[SkyNet] Failed to initialize database schema:', error);
+      console.error('[SkyNet] Failed to initialize MongoDB schema:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
@@ -82,45 +59,18 @@ export class FlightService {
    * @returns Stored flight position record
    */
   async storePosition(data: SkyNetAcarsData): Promise<FlightPosition> {
-    const params = acarsDataToInsertParams(data);
-    const client = await this.pool.connect();
+    const doc = acarsDataToDoc(data);
     try {
-      const result = await client.query<FlightPositionRow>(
-        `
-        INSERT INTO flight_positions (
-          callsign, simulator, aircraft_icao, departure_icao, arrival_icao,
-          latitude, longitude, altitude, ground_speed, heading,
-          fuel_kg, flight_phase, timestamp
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *
-        `,
-        [
-          params.callsign,
-          params.simulator,
-          params.aircraft_icao,
-          params.departure_icao,
-          params.arrival_icao,
-          params.latitude,
-          params.longitude,
-          params.altitude,
-          params.ground_speed,
-          params.heading,
-          params.fuel_kg,
-          params.flight_phase,
-          params.timestamp,
-        ]
-      );
+      const result = await this.positions.insertOne(doc);
 
-      if (result.rows.length === 0) {
+      if (!result.acknowledged) {
         throw new Error('[SkyNet] Failed to insert flight position');
       }
 
-      return rowToFlightPosition(result.rows[0]);
+      return docToFlightPosition({ _id: result.insertedId, ...doc });
     } catch (error) {
       console.error('[SkyNet] Error storing flight position:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
@@ -130,28 +80,20 @@ export class FlightService {
    * @returns Latest flight position or null
    */
   async getLatestPosition(callsign: string): Promise<FlightPosition | null> {
-    const client = await this.pool.connect();
     try {
-      const result = await client.query<FlightPositionRow>(
-        `
-        SELECT * FROM flight_positions
-        WHERE callsign = $1
-        ORDER BY timestamp DESC
-        LIMIT 1
-        `,
-        [callsign]
+      const doc = await this.positions.findOne(
+        { callsign },
+        { sort: { timestamp: -1 } }
       );
 
-      if (result.rows.length === 0) {
+      if (!doc) {
         return null;
       }
 
-      return rowToFlightPosition(result.rows[0]);
+      return docToFlightPosition(doc);
     } catch (error) {
       console.error('[SkyNet] Error getting latest position:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
@@ -167,33 +109,24 @@ export class FlightService {
     startTime?: Date,
     endTime?: Date
   ): Promise<FlightPosition[]> {
-    const client = await this.pool.connect();
     try {
-      let query = `
-        SELECT * FROM flight_positions
-        WHERE callsign = $1
-      `;
-      const params: (string | Date)[] = [callsign];
+      const filter: Record<string, unknown> = { callsign };
 
-      if (startTime) {
-        query += ` AND timestamp >= $${params.length + 1}`;
-        params.push(startTime);
+      if (startTime || endTime) {
+        filter.timestamp = {};
+        if (startTime) (filter.timestamp as Record<string, Date>).$gte = startTime;
+        if (endTime) (filter.timestamp as Record<string, Date>).$lte = endTime;
       }
 
-      if (endTime) {
-        query += ` AND timestamp <= $${params.length + 1}`;
-        params.push(endTime);
-      }
+      const docs = await this.positions
+        .find(filter)
+        .sort({ timestamp: 1 })
+        .toArray();
 
-      query += ` ORDER BY timestamp ASC`;
-
-      const result = await client.query<FlightPositionRow>(query, params);
-      return result.rows.map(rowToFlightPosition);
+      return docs.map(docToFlightPosition);
     } catch (error) {
       console.error('[SkyNet] Error getting flight positions:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
@@ -203,32 +136,38 @@ export class FlightService {
    * @returns Array of latest positions for active flights
    */
   async getActiveFlights(maxAgeMinutes: number = 15): Promise<FlightPosition[]> {
-    const client = await this.pool.connect();
     try {
-      const result = await client.query<FlightPositionRow>(
-        `
-        SELECT DISTINCT ON (callsign) *
-        FROM flight_positions
-        WHERE timestamp > NOW() - INTERVAL '${maxAgeMinutes} minutes'
-        ORDER BY callsign, timestamp DESC
-        `,
-        []
-      );
+      const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
 
-      return result.rows.map(rowToFlightPosition);
+      // MongoDB aggregation to get the latest position per callsign
+      const pipeline = [
+        { $match: { timestamp: { $gt: cutoff } } },
+        { $sort: { timestamp: -1 as const } },
+        {
+          $group: {
+            _id: '$callsign',
+            doc: { $first: '$$ROOT' },
+          },
+        },
+        { $replaceRoot: { newRoot: '$doc' } },
+      ];
+
+      const docs = await this.positions.aggregate(pipeline).toArray();
+      return docs.map((doc: any) => docToFlightPosition(doc));
     } catch (error) {
       console.error('[SkyNet] Error getting active flights:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Close database connection pool
+   * Close MongoDB connection
    */
   async close(): Promise<void> {
-    await this.pool.end();
+    if (this.connected) {
+      await this.client.close();
+      this.connected = false;
+    }
   }
 }
 

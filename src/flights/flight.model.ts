@@ -1,3 +1,4 @@
+import { WithId } from 'mongodb';
 import { SkyNetAcarsData } from '../acars/skynet.schema';
 import { FlightPhase } from '../acars/flightPhase';
 
@@ -5,7 +6,7 @@ import { FlightPhase } from '../acars/flightPhase';
  * Flight position update record stored in database
  */
 export interface FlightPosition {
-  id: number;
+  id: string;
   callsign: string;
   simulator: string;
   aircraftIcao: string;
@@ -41,80 +42,66 @@ export interface FlightSummary {
 }
 
 /**
- * Database row type for flight_positions table
+ * MongoDB document type for flight_positions collection
  */
-export interface FlightPositionRow {
-  id: number;
+export interface FlightPositionDoc {
   callsign: string;
   simulator: string;
-  aircraft_icao: string;
-  departure_icao: string;
-  arrival_icao: string;
+  aircraftIcao: string;
+  departureIcao: string;
+  arrivalIcao: string;
   latitude: number;
   longitude: number;
   altitude: number;
-  ground_speed: number;
+  groundSpeed: number;
   heading: number;
-  fuel_kg: number;
-  flight_phase: string;
+  fuelKg: number;
+  flightPhase: string;
   timestamp: Date;
-  created_at: Date;
+  createdAt: Date;
 }
 
 /**
- * Convert database row to FlightPosition model
+ * Convert MongoDB document to FlightPosition model
  */
-export function rowToFlightPosition(row: FlightPositionRow): FlightPosition {
+export function docToFlightPosition(doc: WithId<FlightPositionDoc>): FlightPosition {
   return {
-    id: row.id,
-    callsign: row.callsign,
-    simulator: row.simulator,
-    aircraftIcao: row.aircraft_icao,
-    departureIcao: row.departure_icao,
-    arrivalIcao: row.arrival_icao,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    altitude: row.altitude,
-    groundSpeed: row.ground_speed,
-    heading: row.heading,
-    fuelKg: row.fuel_kg,
-    flightPhase: row.flight_phase as FlightPhase,
-    timestamp: row.timestamp,
-    createdAt: row.created_at,
+    id: doc._id.toHexString(),
+    callsign: doc.callsign,
+    simulator: doc.simulator,
+    aircraftIcao: doc.aircraftIcao,
+    departureIcao: doc.departureIcao,
+    arrivalIcao: doc.arrivalIcao,
+    latitude: doc.latitude,
+    longitude: doc.longitude,
+    altitude: doc.altitude,
+    groundSpeed: doc.groundSpeed,
+    heading: doc.heading,
+    fuelKg: doc.fuelKg,
+    flightPhase: doc.flightPhase as FlightPhase,
+    timestamp: doc.timestamp,
+    createdAt: doc.createdAt,
   };
 }
 
 /**
- * Convert SkyNet ACARS data to database insert parameters
+ * Convert SkyNet ACARS data to MongoDB insert document
  */
-export function acarsDataToInsertParams(data: SkyNetAcarsData): {
-  callsign: string;
-  simulator: string;
-  aircraft_icao: string;
-  departure_icao: string;
-  arrival_icao: string;
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  ground_speed: number;
-  heading: number;
-  fuel_kg: number;
-  flight_phase: string;
-  timestamp: Date;
-} {
+export function acarsDataToDoc(data: SkyNetAcarsData): FlightPositionDoc {
   return {
     callsign: data.callsign,
     simulator: data.simulator,
-    aircraft_icao: data.aircraftIcao,
-    departure_icao: data.departureIcao,
-    arrival_icao: data.arrivalIcao,
+    aircraftIcao: data.aircraftIcao,
+    departureIcao: data.departureIcao,
+    arrivalIcao: data.arrivalIcao,
     latitude: data.latitude,
     longitude: data.longitude,
     altitude: data.altitude,
-    ground_speed: data.groundSpeed,
+    groundSpeed: data.groundSpeed,
     heading: data.heading,
-    fuel_kg: data.fuelKg,
-    flight_phase: data.flightPhase,
+    fuelKg: data.fuelKg,
+    flightPhase: data.flightPhase,
     timestamp: new Date(data.timestamp),
+    createdAt: new Date(),
   };
 }

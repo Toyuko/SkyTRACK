@@ -18,6 +18,7 @@ type DetailedStatusHandler = (status: DetailedStatus) => void;
 /**
  * Simulator Service
  * Handles connection to flight simulators via FSUIPC/XPUIPC
+ * and relays live data to the SkyNet backend via WebSocket
  */
 export class SimulatorService {
   private messageHandlers: Set<MessageHandler> = new Set();
@@ -39,8 +40,120 @@ export class SimulatorService {
   private pendingData: SkyNetAcarsSnapshot | null = null;
   private throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // WebSocket relay to SkyNet backend for live tracking
+  private relayWs: WebSocket | null = null;
+  private relayUrl: string = 'ws://localhost:3000/ws/skynet:flights';
+  private relayEnabled: boolean = true;
+  private relayReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly RELAY_RECONNECT_MS = 5000;
+  // Separate throttle for backend relay (send every 2s to avoid overloading DB)
+  private lastRelayTime = 0;
+  private readonly RELAY_THROTTLE_MS = 2000;
+
   constructor() {
     this.setupEventListener();
+  }
+
+  /**
+   * Configure the WebSocket relay URL for backend sync
+   */
+  setRelayUrl(url: string): void {
+    this.relayUrl = url;
+    // Reconnect if already connected
+    if (this.relayWs) {
+      this.disconnectRelay();
+      this.connectRelay();
+    }
+  }
+
+  /**
+   * Enable/disable live relay to backend
+   */
+  setRelayEnabled(enabled: boolean): void {
+    this.relayEnabled = enabled;
+    if (!enabled) {
+      this.disconnectRelay();
+    } else if (this.isConnected) {
+      this.connectRelay();
+    }
+  }
+
+  /**
+   * Connect WebSocket relay to SkyNet backend
+   */
+  private connectRelay(): void {
+    if (!this.relayEnabled || this.relayWs?.readyState === WebSocket.OPEN) return;
+
+    try {
+      this.relayWs = new WebSocket(this.relayUrl);
+
+      this.relayWs.onopen = () => {
+        console.log('[Simulator] Backend relay connected:', this.relayUrl);
+      };
+
+      this.relayWs.onclose = () => {
+        console.log('[Simulator] Backend relay disconnected');
+        this.relayWs = null;
+        this.scheduleRelayReconnect();
+      };
+
+      this.relayWs.onerror = (err) => {
+        console.error('[Simulator] Backend relay error:', err);
+      };
+    } catch (error) {
+      console.error('[Simulator] Failed to connect relay:', error);
+      this.scheduleRelayReconnect();
+    }
+  }
+
+  /**
+   * Disconnect WebSocket relay
+   */
+  private disconnectRelay(): void {
+    if (this.relayReconnectTimer) {
+      clearTimeout(this.relayReconnectTimer);
+      this.relayReconnectTimer = null;
+    }
+    if (this.relayWs) {
+      this.relayWs.onclose = null; // prevent reconnect
+      this.relayWs.close();
+      this.relayWs = null;
+    }
+  }
+
+  /**
+   * Schedule relay reconnection
+   */
+  private scheduleRelayReconnect(): void {
+    if (!this.relayEnabled || this.relayReconnectTimer) return;
+    this.relayReconnectTimer = setTimeout(() => {
+      this.relayReconnectTimer = null;
+      if (this.relayEnabled && this.isConnected) {
+        this.connectRelay();
+      }
+    }, this.RELAY_RECONNECT_MS);
+  }
+
+  /**
+   * Relay ACARS data to backend (throttled)
+   */
+  private relayToBackend(data: SkyNetAcarsSnapshot): void {
+    if (!this.relayEnabled || !this.relayWs || this.relayWs.readyState !== WebSocket.OPEN) return;
+
+    const now = Date.now();
+    if (now - this.lastRelayTime < this.RELAY_THROTTLE_MS) return;
+    this.lastRelayTime = now;
+
+    try {
+      // Send in SkyNet ACARS schema format with simulator field
+      const payload = {
+        ...data,
+        simulator: this.detailedStatus.simulator_type || 'MSFS',
+      };
+      this.relayWs.send(JSON.stringify(payload));
+    } catch (error) {
+      console.error('[Simulator] Failed to relay data to backend:', error);
+    }
   }
 
   /**
@@ -175,6 +288,9 @@ export class SimulatorService {
       this.isConnected = true;
       this.notifyStatusHandlers('connected');
 
+      // Start backend relay for live tracking
+      this.connectRelay();
+
       // Prime detailed status after connect
       try {
         const status = await invoke<DetailedStatus>('get_simulator_status');
@@ -198,6 +314,9 @@ export class SimulatorService {
       await invoke('disconnect_simulator');
       this.isConnected = false;
       this.notifyStatusHandlers('disconnected');
+
+      // Stop backend relay
+      this.disconnectRelay();
 
       // Refresh status after disconnect
       try {
@@ -308,9 +427,12 @@ export class SimulatorService {
   }
 
   /**
-   * Notify all message handlers
+   * Notify all message handlers and relay to backend
    */
   private notifyMessageHandlers(data: SkyNetAcarsSnapshot): void {
+    // Relay live data to SkyNet backend for persistence and broadcast
+    this.relayToBackend(data);
+
     this.messageHandlers.forEach((handler) => {
       try {
         handler(data);
@@ -342,6 +464,7 @@ export class SimulatorService {
       this.throttleTimer = null;
     }
     this.pendingData = null;
+    this.disconnectRelay();
     if (this.eventUnlisten) {
       this.eventUnlisten();
       this.eventUnlisten = null;
@@ -370,5 +493,7 @@ export const simulatorService = {
   get onMessage() { return getSimulatorService().onMessage.bind(getSimulatorService()); },
   get onStatusChange() { return getSimulatorService().onStatusChange.bind(getSimulatorService()); },
   get onDetailedStatusChange() { return getSimulatorService().onDetailedStatusChange.bind(getSimulatorService()); },
+  get setRelayUrl() { return getSimulatorService().setRelayUrl.bind(getSimulatorService()); },
+  get setRelayEnabled() { return getSimulatorService().setRelayEnabled.bind(getSimulatorService()); },
   get cleanup() { return getSimulatorService().cleanup.bind(getSimulatorService()); },
 };

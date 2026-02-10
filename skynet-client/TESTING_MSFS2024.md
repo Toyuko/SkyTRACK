@@ -73,4 +73,4 @@ Then run the built executable from `src-tauri/target/release/` or the installer 
 
 ## Technical note
 
-SkyNET uses **SimConnect** for **MSFS 2020** and **MSFS 2024** (minimal raw FFI; no FSUIPC). For **FSX** and **Prepar3D**, SkyNET still uses **FSUIPC**.
+SkyNET uses **SimCS 2020** and **MSFS 20onnect** for **MSF24** (minimal raw FFI; no FSUIPC). For **FSX** and **Prepar3D**, SkyNET still uses **FSUIPC**.

@@ -113,7 +113,7 @@ export function Settings({ onClose }: SettingsProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking the backdrop
         if (e.target === e.currentTarget) {
@@ -122,18 +122,21 @@ export function Settings({ onClose }: SettingsProps) {
       }}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-jal-navy-light rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h2>
+        <div className="sticky top-0 bg-white dark:bg-jal-navy-light border-b border-gray-200 dark:border-white/5 px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-jal-red rounded-full" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5"
             aria-label={t('settings.closeAria')}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -154,8 +157,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleThemeChange('light')}
                     className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
                       theme === 'light'
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     {t('common.light')}
@@ -164,8 +167,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleThemeChange('dark')}
                     className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
                       theme === 'dark'
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     {t('common.dark')}
@@ -174,8 +177,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleThemeChange('system')}
                     className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
                       theme === 'system'
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     {t('common.system')}
@@ -190,7 +193,7 @@ export function Settings({ onClose }: SettingsProps) {
                 <select
                   value={language}
                   onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 rounded-lg bg-white dark:bg-jal-navy-mid text-gray-900 dark:text-white focus:ring-2 focus:ring-jal-red focus:border-transparent"
                 >
                   <option value="en">{t('languages.en')}</option>
                   <option value="es">{t('languages.es')}</option>
@@ -230,8 +233,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleSimulatorChange(Simulator.MSFS)}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       simulator === Simulator.MSFS
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     MSFS / 2024
@@ -240,8 +243,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleSimulatorChange(Simulator.FSX)}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       simulator === Simulator.FSX
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     FSX
@@ -250,8 +253,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleSimulatorChange(Simulator.P3D)}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       simulator === Simulator.P3D
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     P3D
@@ -260,8 +263,8 @@ export function Settings({ onClose }: SettingsProps) {
                     onClick={() => handleSimulatorChange(Simulator.XPLANE)}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       simulator === Simulator.XPLANE
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-jal-red text-white border-jal-red'
+                        : 'bg-white dark:bg-jal-navy-mid text-gray-700 dark:text-gray-300 border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     X-Plane
@@ -288,7 +291,7 @@ export function Settings({ onClose }: SettingsProps) {
                     onChange={(e) => handleAutoReconnectChange(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-jal-red/30 dark:peer-focus:ring-jal-red/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-jal-red"></div>
                 </label>
               </div>
 
@@ -331,7 +334,7 @@ export function Settings({ onClose }: SettingsProps) {
                     onChange={(e) => handleMockDataChange(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-jal-red/30 dark:peer-focus:ring-jal-red/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-jal-red"></div>
                 </label>
               </div>
 
@@ -351,7 +354,7 @@ export function Settings({ onClose }: SettingsProps) {
                     onChange={(e) => handleAdvancedMetricsChange(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-jal-red/30 dark:peer-focus:ring-jal-red/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-jal-red"></div>
                 </label>
               </div>
             </div>
@@ -377,7 +380,7 @@ export function Settings({ onClose }: SettingsProps) {
                     onChange={(e) => handlePhpVmsToggle(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-jal-red/30 dark:peer-focus:ring-jal-red/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-jal-red"></div>
                 </label>
               </div>
 
@@ -416,17 +419,17 @@ export function Settings({ onClose }: SettingsProps) {
           </section>
 
           {/* Actions */}
-          <section className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <section className="pt-4 border-t border-gray-200 dark:border-white/5">
             <div className="flex gap-3">
               <button
                 onClick={handleReset}
-                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5"
               >
                 {t('settings.resetToDefaults')}
               </button>
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-jal-red text-white rounded-lg hover:bg-jal-red-dark transition-colors shadow-sm hover:shadow-jal"
               >
                 {t('common.close')}
               </button>

@@ -1,99 +1,159 @@
-# SkyNET
+# SkyTRACK
 
-A modern ACARS (Aircraft Communications Addressing and Reporting System) application for flight simulators, with phpVMS7 integration.
+A real-time flight tracking dashboard for flight simulators with a glassmorphism cockpit UI, powered by a PHP 8.3+ Laravel backend, Python data bridge, and React + TypeScript frontend.
+
+## Architecture
+
+```
+┌──────────────┐    IPC Offsets    ┌──────────────────┐   HTTP POST    ┌──────────────────┐
+│  Simulator   │ ←───────────────→ │  Python Feeder   │ ────────────→ │  Laravel Backend │
+│  MSFS / P3D  │    FSUIPC         │  (200ms polling) │   /api/telem  │  (PHP 8.3+)      │
+│  X-Plane     │    XPUIPC         └──────────────────┘               │                  │
+└──────────────┘                                                      │  Redis Cache ──→ │
+                                                                      │  Laravel Reverb  │
+                    ┌──────────────────────────────────────────────┐   │  (WebSocket)     │
+                    │  React + TypeScript Frontend                 │   └────────┬─────────┘
+                    │  Aceternity UI · Glassmorphism · Leaflet     │ ←──────────┘
+                    │  Cockpit Display · Floating Dock             │   WebSocket
+                    └──────────────────────────────────────────────┘   (sub-second)
+```
 
 ## Features
 
-- **Real-time Flight Tracking**: Track your flights in real-time with position updates
-- **Multi-Simulator Support**: Works with MSFS, FSX, P3D, and X-Plane
-- **phpVMS7 Integration**: Seamless integration with phpVMS7 virtual airline management system
-- **Automatic PIREP Submission**: Automatically submit PIREPs from flight data
-- **WebSocket Support**: Real-time data transmission via WebSocket
-- **Modern UI**: Built with React and Tailwind CSS
+- **Sub-Second Live Tracking** — WebSocket via Laravel Reverb, REST polling fallback
+- **FSUIPC/XPUIPC Only** — Reads standard IPC memory offsets. No SimConnect dependency
+- **Multi-Simulator** — MSFS, MSFS 2024, P3D, FSX, X-Plane
+- **Glassmorphism Cockpit** — Frosted-glass instrument panel with Aceternity UI spotlight effects
+- **Leaflet Dark Map** — CartoDB Dark Matter tiles with real-time aircraft marker and trail
+- **Floating Dock Nav** — macOS-style dock (split/cockpit/map views) with spring physics
+- **Redis Flight State** — Current telemetry cached in Redis with 5-minute TTL
+- **phpVMS7 Integration** — Automatic PIREP submission, flight booking, bid management
+- **Japan Airlines Theme** — Red/navy dark cockpit aesthetic with JetBrains Mono typography
 
-## Components
+## Tech Stack
 
-### SkyNet Client Application
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | PHP 8.3+, Laravel 11, Laravel Reverb (WebSocket), Redis |
+| **Frontend** | TypeScript, React 18, Tailwind CSS, Framer Motion |
+| **UI Components** | Aceternity UI (CardSpotlight, FloatingDock, MovingBorder, Spotlight) |
+| **Map** | Leaflet + react-leaflet (CartoDB Dark Matter tiles) |
+| **Data Bridge** | Python 3.10+, pyuipc (FSUIPC/XPUIPC offset reader) |
+| **Database** | MongoDB 7 (flight history), Redis (live state cache) |
+| **Infrastructure** | Docker Compose (PHP-FPM, Nginx, Reverb, MongoDB, Redis) |
 
-The main ACARS client application built with React and Vite.
+## Quick Start
 
-### phpVMS7 Module
-
-A complete phpVMS7 module that provides server-side integration for ACARS data.
-
-## Getting Started
-
-### SkyNet Client
-
-#### Install Dependencies
+### 1. Start Infrastructure
 
 ```bash
-npm install
+docker-compose up -d
 ```
 
-#### Start Development Server
+This starts: MongoDB, Redis, PHP-FPM, Nginx (`:8000`), Laravel Reverb (`:8080`)
+
+### 2. Frontend Development
 
 ```bash
+cd skynet-client
+npm install
 npm run dev
 ```
 
-The app will open automatically in your browser at `http://localhost:3000`
+Open `http://localhost:5173/#/dashboard` for the new glassmorphism cockpit UI.
 
-#### Build for Production
-
-```bash
-npm run build
-```
-
-#### Preview Production Build
+### 3. Python Feeder (connect to simulator)
 
 ```bash
-npm run preview
+cd feeder
+pip install -r requirements.txt
+cp .env.example .env   # Edit with your settings
+python main.py --sim MSFS --callsign JAL001
 ```
 
-### phpVMS7 Module Installation
+### 4. Laravel Backend Setup
 
-See the [phpVMS7 Module README](phpvms-module/README.md) for detailed installation instructions.
+```bash
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan reverb:start
+```
 
-Quick installation:
+## Project Structure
 
-1. Copy the module to your phpVMS7 installation:
-   ```bash
-   cp -r phpvms-module /path/to/phpvms7/modules/SkyNetAcars
-   ```
+```
+SkyTRACK-main/
+├── backend/                    # Laravel 11 PHP API
+│   ├── app/
+│   │   ├── Http/Controllers/   # TelemetryController (ingest, current, show)
+│   │   ├── Events/             # FlightDataUpdated (broadcast via Reverb)
+│   │   ├── Services/           # FlightStateService (Redis CRUD)
+│   │   └── Http/Middleware/    # FeederAuthentication (X-Feeder-Token)
+│   ├── config/skytrack.php     # Feeder token, flight TTL, Reverb config
+│   ├── routes/api.php          # POST /api/telemetry, GET /api/telemetry/current
+│   ├── docker/nginx.conf       # Nginx reverse proxy config
+│   └── Dockerfile              # PHP 8.3-FPM Alpine
+│
+├── feeder/                     # Python FSUIPC/XPUIPC bridge
+│   ├── main.py                 # Main feeder loop (200ms poll → 500ms POST)
+│   ├── config.py               # FSUIPC offset map, API settings
+│   └── requirements.txt        # pyuipc, requests, python-dotenv
+│
+├── skynet-client/              # React + TypeScript frontend
+│   ├── src/
+│   │   ├── pages/Dashboard.tsx           # Main glassmorphism cockpit dashboard
+│   │   ├── components/CockpitDisplay.tsx # HUD instrument panel (CardSpotlight)
+│   │   ├── components/FlightMapLeaflet.tsx # Leaflet dark map with trail
+│   │   ├── components/ui/               # Aceternity UI components
+│   │   │   ├── floating-dock.tsx         # macOS dock navigation
+│   │   │   ├── card-spotlight.tsx        # Mouse-following spotlight cards
+│   │   │   ├── moving-border.tsx         # Animated border buttons
+│   │   │   ├── glowing-effect.tsx        # Glow hover effect
+│   │   │   └── spotlight.tsx             # Background spotlight SVG
+│   │   ├── services/flightDataService.ts # WebSocket + REST telemetry client
+│   │   ├── lib/utils.ts                  # cn() utility (clsx + tailwind-merge)
+│   │   └── styles/index.css              # Glassmorphism base, Leaflet dark overrides
+│   └── tailwind.config.js      # JAL colors, JetBrains Mono, glass shadows
+│
+├── src/                        # Legacy Node.js backend (MongoDB)
+├── phpvms-module/              # phpVMS7 Laravel module
+└── docker-compose.yml          # Full stack: PHP, Nginx, Reverb, MongoDB, Redis
+```
 
-2. Install dependencies:
-   ```bash
-   cd /path/to/phpvms7
-   composer require nwidart/laravel-modules
-   ```
+## API Endpoints
 
-3. Enable and migrate:
-   ```bash
-   php artisan module:enable SkyNetAcars
-   php artisan module:migrate SkyNetAcars
-   ```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/telemetry` | Ingest telemetry from feeder (requires `X-Feeder-Token`) |
+| `GET` | `/api/telemetry/current` | All active flights from Redis |
+| `GET` | `/api/telemetry/{callsign}` | Specific flight state |
+| `DELETE` | `/api/telemetry/{callsign}` | Remove flight from tracking |
+| `GET` | `/api/health` | Service health check |
 
-## Integration
+## Data Flow
 
-The ACARS app integrates with phpVMS7 through:
+1. **Feeder** reads FSUIPC/XPUIPC memory offsets at 200ms (5 Hz)
+2. **Feeder** POSTs JSON telemetry to Laravel API at 500ms (2 Hz)
+3. **Laravel** stores current state in **Redis** (SET with 5min TTL)
+4. **Laravel** broadcasts `FlightDataUpdated` event via **Reverb** WebSocket
+5. **React** receives telemetry on WebSocket channel `flights` → event `telemetry.updated`
+6. **CockpitDisplay** renders instruments with Framer Motion value transitions
+7. **FlightMapLeaflet** updates aircraft marker position and trail polyline
 
-1. **REST API**: The phpVMS7 module provides API endpoints for:
-   - Position updates
-   - Flight start/end events
-   - PIREP submission
-   - Flight and bid validation
+## FSUIPC Offset Map
 
-2. **Authentication**: Uses Laravel Sanctum for secure API access
-
-3. **Automatic PIREP Creation**: Flight data is automatically converted to PIREPs
-
-## Documentation
-
-- [SkyNET Client Quick Start](skynet-client/QUICKSTART.md) - Get the desktop client running
-- [Testing with MSFS 2024](skynet-client/TESTING_MSFS2024.md) - Test with Microsoft Flight Simulator 2024 (SimConnect)
-- [phpVMS7 Module README](phpvms-module/README.md) - Complete module documentation
-- [phpVMS7 Module Installation Guide](phpvms-module/INSTALL.md) - Detailed installation steps
+| Offset | Size | Description | Conversion |
+|--------|------|-------------|-----------|
+| `0x0560` | 8B | Latitude | `raw × 90 / 10001750` |
+| `0x0568` | 8B | Longitude | `raw × 360 / 2^48` |
+| `0x0574` | 4B | Altitude | `raw / 256 × 3.28084` (m→ft) |
+| `0x0580` | 4B | Heading | `raw × 360 / 2^32` |
+| `0x02BC` | 4B | IAS | `raw / 128` (knots) |
+| `0x02B4` | 4B | Ground Speed | `raw / 65536 × 1.94384` (m/s→kt) |
+| `0x02C8` | 4B | Vertical Speed | `raw / 256` (fpm) |
+| `0x0366` | 2B | On Ground | `0 = airborne, 1 = ground` |
 
 ## License
 

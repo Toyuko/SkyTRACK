@@ -13,7 +13,7 @@ const envSchema = z.object({
     .default('3000')
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().min(1).max(65535)),
-  SKYNET_DB_URL: z.string().url('SKYNET_DB_URL must be a valid PostgreSQL connection URL'),
+  SKYNET_DB_URL: z.string().min(1, 'SKYNET_DB_URL must be a valid MongoDB connection URL'),
   SKYNET_REDIS_URL: z.string().url('SKYNET_REDIS_URL must be a valid Redis connection URL'),
   SKYNET_LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
